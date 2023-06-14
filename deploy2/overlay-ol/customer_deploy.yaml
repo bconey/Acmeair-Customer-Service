@@ -1,0 +1,113 @@
+apiVersion: apps.openliberty.io/v1beta2
+kind: OpenLibertyApplication
+metadata:
+  name: acmeair-customer-service
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  applicationImage: docker-na-public.artifactory.swg-devops.com/hyc-wassvt-team-image-registry-docker-local/acmeair/acmeair-customer-service:ol-jdk8-java17
+  createKnativeService: false
+  expose: true
+  pullPolicy: Always
+  route:
+    path: "/customer"
+  env:
+  - name: USERNAME
+    value: admin
+  - name: PASSWORD
+    value: password
+  - name: MONGO_HOST
+    value: acmeair-customer-db
+  - name: ACMEAIR_STACKAA_AUTH_URL
+    valueFrom:
+      configMapKeyRef:
+        name: aa-routes
+        key: auth-route
+  - name: JAEGER_AGENT_HOST
+    value: jaeger-all-in-one-inmemory-agent
+  - name: JAEGER_AGENT_PORT
+    value: '6832'
+  - name: JAEGER_ENDPOINT
+    value: 'http://jaeger-all-in-one-inmemory-collector:14268/api/traces'
+  - name: ACCESS_LOGGING_ENABLED
+    value: 'false'
+  - name: TRACE_SPEC
+    value: '*=info'
+  - name: LOGGING_FORMAT
+    value: 'simple'
+#  readinessProbe:
+#    httpGet:
+#      path: /health
+#      port: 9080
+#    initialDelaySeconds: 10
+#    periodSeconds: 5
+#  livenessProbe:
+#    httpGet:
+#      path: /health
+#      port: 9080
+#    initialDelaySeconds: 120
+#    periodSeconds: 15
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+    port: 9080
+---
+##### Customer Database #####
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    service: acmeair-customer-db
+  name: acmeair-customer-db
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  ports:
+  - name: "27017"
+    port: 27017
+    protocol: TCP
+    targetPort: 27017
+  selector:
+    name: acmeair-customer-db
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: acmeair-customer-db
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: acmeair-customer-db
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        name: acmeair-customer-db
+    spec:
+      volumes:
+        - name: acmeair-customer-db-1
+          emptyDir: {}
+        - name: acmeair-customer-db-2
+          emptyDir: {}
+      containers:
+      - image: mongo
+        name: acmeair-customer-db
+        ports:
+        - containerPort: 27017
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+          - name: acmeair-customer-db-1
+            mountPath: /data/configdb
+          - name: acmeair-customer-db-2
+            mountPath: /data/db
+      restartPolicy: Always
+status: {}
