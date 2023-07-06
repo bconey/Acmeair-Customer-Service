@@ -49,7 +49,7 @@
     <classloader apiTypeVisibility="api,ibm-api,spec,stable,third-party" />
   </webApplication>
 
-  <keyStore id="defaultKeyStore" password="secret" />
+  <!-- <keyStore id="defaultKeyStore" password="secret" /> -->
 
   <cors 
     domain="/customer" 
